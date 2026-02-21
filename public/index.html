@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Kamran Boss Private Chat</title>
+  <style>
+    body { font-family: Arial; background: #111; color: #fff; }
+    #chat { border: 1px solid #444; height: 300px; overflow-y: scroll; margin-bottom: 10px; }
+    input, button { padding: 8px; margin: 5px; }
+  </style>
+</head>
+<body>
+  <h2>🔒 Kamran Boss Private Chat</h2>
+  <input id="name" placeholder="Enter Name">
+  <input id="password" placeholder="Enter Password">
+  <button onclick="joinRoom()">Join Chat</button>
+
+  <div id="chat"></div>
+  <input id="msg" placeholder="Type message">
+  <button onclick="sendMessage()">Send</button>
+  <input type="file" id="fileInput">
+  <button onclick="sendFile()">Send File</button>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let roomKey = "";
+
+    function joinRoom() {
+      let name = document.getElementById("name").value;
+      let password = document.getElementById("password").value;
+      roomKey = name + "_" + password;
+      socket.emit("joinRoom", { name, password });
+    }
+
+    socket.on("joined", (msg) => {
+      document.getElementById("chat").innerHTML += "<p>" + msg + "</p>";
+    });
+
+    function sendMessage() {
+      let msg = document.getElementById("msg").value;
+      socket.emit("chatMessage", { roomKey, msg });
+    }
+
+    socket.on("chatMessage", (msg) => {
+      document.getElementById("chat").innerHTML += "<p>" + msg + "</p>";
+    });
+
+    function sendFile() {
+      let file = document.getElementById("fileInput").files[0];
+      let reader = new FileReader();
+      reader.onload = function(e) {
+        socket.emit("sendFile", { roomKey, fileData: e.target.result, fileType: file.type });
+      };
+      reader.readAsDataURL(file);
+    }
+
+    socket.on("receiveFile", ({ fileData, fileType }) => {
+      if (fileType.startsWith("image")) {
+        document.getElementById("chat").innerHTML += `<img src="${fileData}" width="100">`;
+      } else if (fileType.startsWith("audio")) {
+        document.getElementById("chat").innerHTML += `<audio controls src="${fileData}"></audio>`;
+      }
+    });
+  </script>
+</body>
+</html>
